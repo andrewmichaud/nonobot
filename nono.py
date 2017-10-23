@@ -114,10 +114,18 @@ class NonoGrid:
             if row_count > 0:
                 self.left_hints[r].append(row_count)
 
+            # Handle empty row.
+            if self.left_hints[r] == []:
+                self.left_hints[r] = [0]
+
         # Handle last column.
         for c in range(len(self.squares[0])):
             if col_counts[c] > 0:
                 self.top_hints[c].append(col_counts[c])
+
+            # Handle empty columns.
+            if self.top_hints[c] == []:
+                self.top_hints[c] = [0]
 
     class Square:
         def __init__(self):
@@ -126,7 +134,7 @@ class NonoGrid:
             self.has_value = False
 
         def __str__(self):
-            if self.filled:
+            if self.filled or self.has_value:
                 return "#"
             elif self.marked:
                 return "?"
