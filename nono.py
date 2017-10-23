@@ -85,7 +85,14 @@ class NonoGrid:
 
         return out
 
+    def clear(self):
+        """Clear grid."""
+        for row in self.squares:
+            for square in row:
+                square.clear()
+
     def gen_hints(self):
+        """Generate nonogram hints."""
         self.left_hints = [[] for r in range(len(self.squares))]
         self.top_hints = [[] for c in range(len(self.squares[0]))]
 
@@ -127,19 +134,37 @@ class NonoGrid:
             if self.top_hints[c] == []:
                 self.top_hints[c] = [0]
 
+        # Blank out empty rows.
+        for r, row in enumerate(self.squares):
+            for c, square in enumerate(self.squares[r]):
+                if 0 in self.left_hints[r] or 0 in self.top_hints[c]:
+                    square.denied = True
+
     class Square:
         def __init__(self):
-            self.marked = False
+            # User indicators.
             self.filled = False
+            self.marked = False
+            self.denied = False
+
+            # True info.
             self.has_value = False
 
         def __str__(self):
-            if self.filled or self.has_value:
+            if self.filled:
                 return "#"
             elif self.marked:
                 return "?"
+            elif self.denied:
+                return "X"
 
             return "_"
+
+        def clear(self):
+            self.filled = False
+            self.marked = False
+            self.denied = False
+            self.has_value = False
 
         def debug_print(self):
             if self.has_value:

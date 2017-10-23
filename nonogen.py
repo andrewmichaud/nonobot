@@ -3,14 +3,10 @@ import random
 
 from perlin import PerlinNoiseFactory
 
-def clear(nonogrid):
-    """Clear a nonogrid."""
-    for row in nonogrid.squares:
-        for square in row:
-            square.has_value = False
-
 def gen_random(nonogrid):
     """Generate nonogrid completely at random."""
+    nonogrid.clear()
+
     for row in nonogrid.squares:
         for square in row:
             if random.randint(0,1) == 0:
@@ -18,6 +14,8 @@ def gen_random(nonogrid):
 
 def gen_perlin(nonogrid):
     """Generate nonogrid using perlin noise."""
+    nonogrid.clear()
+
     # experiment with this, probably.
     arbitrary = 11
     size = arbitrary * len(nonogrid.squares)
