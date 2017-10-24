@@ -5,7 +5,7 @@ import nonogen
 import perlin
 
 if __name__ == "__main__":
-    grid = nono.NonoGrid(15)
+    grid = nono.NonoGrid(20)
     nonogen.gen_random(grid)
 
     grid.gen_hints()

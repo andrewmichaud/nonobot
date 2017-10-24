@@ -20,20 +20,14 @@ def gen_perlin(nonogrid):
     arbitrary = 11
     size = arbitrary * len(nonogrid.squares)
     res = 40
-    frames = 20
-    frameres = 5
     space_range = size//res
-    frame_range = frames//frameres
 
-    pnf = PerlinNoiseFactory(2, octaves=4, tile=(space_range, space_range, frame_range))
+    pnf = PerlinNoiseFactory(2, octaves=8, tile=(space_range, space_range))
 
     step = size // len(nonogrid.squares)
     for x in range(0, size, step):
         for y in range(0, size, step):
             n = pnf(x/res, y/res)
-            if n < 0:
-                o = 0
-            else:
-                o = 1
 
-            nonogrid.squares[y//step][x//step].has_value = o
+            # Split nice perlin noise into blunt black/white.
+            nonogrid.squares[y//step][x//step].has_value = n < 0

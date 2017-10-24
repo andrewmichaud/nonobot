@@ -1,110 +1,121 @@
 class NonoGrid:
     def __init__(self, height, width=None):
         self.height = height
-        if width is None:
+        self.width = width
+        if self.width is None:
             self.width = height
-        else:
-            self.width = width
 
-        self.squares = [[NonoGrid.Square() for square in range(self.width)] for row in
-                        range(self.height)]
+        self.squares = [[NonoGrid.Square() for s in range(self.width)] for r in range(self.height)]
+
+        self.spacer = 5
+
+        # command-line output implementation details.
+        self._left_spacer = "|"
+        self._top_spacer = "-"
 
     def __str__(self):
         out = ""
 
-        # Calculate the amount of padding we need for each hint row and each hint column
-        # Also calculate additional padding for double-digit numbers.
-
-        # Calculate left.
-        max_left_hint_size = 0
-        max_left_hint_digit = 1
+        # Set up left hints for display (padding!).
+        max_left_hint_size = 1
+        display_left_hints = []
         for item in self.left_hints:
-            if len(item) > max_left_hint_size:
-                max_left_hint_size = len(item)
 
+            new_item = ""
             for hint in item:
-                if len(str(hint)) > max_left_hint_digit:
-                    max_left_hint_digit = len(str(hint))
+                # Space out double-digit hints for legibility.
+                if len(str(hint)) > 1:
+                    new_item += f"{self._left_spacer}{hint}{self._left_spacer}"
+                else:
+                    new_item += f"{hint}"
 
-        modified_left_hints = []
-        for item in self.left_hints:
-            modified_left_hints.append(([" "] * (max_left_hint_size - len(item))) + item)
+            if len(new_item) > max_left_hint_size:
+                max_left_hint_size = len(new_item)
 
+            display_left_hints.append(new_item)
 
-        # Calculate top.
-        max_top_hint_size = 0
-        max_top_hint_digit = 1
-        modified_top_hints = []
+        # Set up top hints for display (also padding!).
+        max_top_hint_size = 1
+        display_top_hints = []
         for item in self.top_hints:
-            if len(item) > max_top_hint_size:
-                max_top_hint_size = len(item)
 
+            new_item = ""
             for hint in item:
-                if len(str(hint)) > max_top_hint_digit:
-                    max_top_hint_digit = len(str(hint))
+                # Space out double-digit hints for legibility.
+                if len(str(hint)) > 1:
+                    new_item += f"{self._top_spacer}{hint}{self._top_spacer}"
+                else:
+                    new_item += f"{hint}"
 
-        for item in self.top_hints:
-            modified_top_hints.append(([" "] * (max_top_hint_size - len(item))) + item)
+            if len(new_item) > max_top_hint_size:
+                max_top_hint_size = len(new_item)
+
+            display_top_hints.append(new_item)
+
+        # Pad top hints (can't do in-line like with left hints).
+        for i, item in enumerate(display_top_hints):
+            if len(item) < max_top_hint_size:
+                display_top_hints[i] = f"{' ' * (max_top_hint_size - len(item))}{item}"
 
         # Print top hints.
         for i in range(max_top_hint_size):
 
             # Space out left hints.
-            out += (" " + " " * max_left_hint_digit) * max_left_hint_size + " "
+            out += f"{' ' * (max_left_hint_size + 1)}"
 
-            for c, col in enumerate(modified_top_hints):
+            for c, col in enumerate(display_top_hints):
+                # Space between columns for clarity.
+                out += f" {col[i]}"
 
-                # Spacing to make things nicer.
-                if c != 0 and (c+1) % 5 == 0:
-                    out += ("^" * max_top_hint_digit) + f"{col[i]}" + " "
-                elif c != 0:
-                    out += ("@" * (max_top_hint_digit + 1)) + f"{col[i]}"
-                else:
-                    out += ("`" * (max_top_hint_digit - 1)) + f"{col[i]}"
+                # Space every self.spacer columns, also for clarity.
+                if c != 0 and (c+1) % self.spacer == 0:
+                    out += "  "
 
             out += "\n"
 
         # Hint/top row divider.
-        out += (" " + " " * max_left_hint_digit) * max_left_hint_size + "+" + "-" * \
-        (((len(self.squares) * (1 + max_top_hint_digit)) + \
-          len(self.squares) // 5) - 2) + "+\n"
+        # Pad out left hints, do corner, two marks per square, two marks per divider, sub one for
+        # the end.
+        # Add right corner and newline
+        out += (" " * max_left_hint_size) + \
+                "+" + \
+                "-" * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
+                "+\n"
 
         for r, row in enumerate(self.squares):
 
             # Don't forget to put in left hints.
-            for lh in modified_left_hints[r]:
-                hint_section = f"{lh}"
-                hint_section = " " * (max_left_hint_digit - len(hint_section)) + " " + hint_section
-                out += hint_section
+            for lh in display_left_hints[r]:
+                out += lh
 
             # Divider between left hints and squares.
-            out += "|"
+            out += f"{' ' * (max_left_hint_size - len(display_left_hints[r]))}|"
 
             for c, square in enumerate(row):
 
                 # Spacing to make things nicer.
-                if c != 0 and (c+1) % 5 == 0:
-                    out += (" " * max_top_hint_digit) + f"{square}" + " |"
-                elif c != 0:
-                    out += (" " * max_top_hint_digit) + f"{square}"
+                if c != 0 and (c+1) % self.spacer == 0:
+                    out += f" {square} |"
                 else:
-                    out += (" " * (max_top_hint_digit - 1)) + f"{square}"
-                # else:
-                #     out += f"{square}"
+                    out += f" {square}"
 
             if r != len(self.squares) - 1:
                 out += "\n"
 
             # Add divider rows between squares.
-            if (r+1) % 5 == 0 and r > 0 and r < len(self.squares) - 1:
-                out += (" " + " " * max_left_hint_digit) * max_left_hint_size + "|" + "-" * \
-                (((len(self.squares) * (1 + max_top_hint_digit)) + \
-                  len(self.squares) // 5) - 2) + "|\n"
+            if (r+1) % self.spacer == 0 and r > 0 and r < len(self.squares) - 1:
+                out += (" " * max_left_hint_size) + \
+                        "|" + \
+                        "-" * (((len(self.squares)*2) + (len(self.squares)//self.spacer)*2) - 1) +\
+                        "|\n"
 
-        # Bottom row divider.
-        out += "\n" + (" " + " " * max_left_hint_digit) * max_left_hint_size + "+" + "-" * \
-        (((len(self.squares) * (1 + max_top_hint_digit)) + \
-           len(self.squares) // 5) - 2) + "+"
+        # Hint/top row divider.
+        # Same as top.
+        out += "\n"
+        out += (" " * max_left_hint_size) + \
+                "+" + \
+                "-" * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
+                "+\n"
 
         return out
 
@@ -188,8 +199,3 @@ class NonoGrid:
             self.marked = False
             self.denied = False
             self.has_value = False
-
-        def debug_print(self):
-            if self.has_value:
-                return "#"
-
