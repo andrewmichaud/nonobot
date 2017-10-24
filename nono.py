@@ -39,8 +39,9 @@ class NonoGrid:
             if len(item) > max_top_hint_size:
                 max_top_hint_size = len(item)
 
-            if len(str(item)) > max_top_hint_digit:
-                max_top_hint_digit = len(str(item))
+            for hint in item:
+                if len(str(hint)) > max_top_hint_digit:
+                    max_top_hint_digit = len(str(hint))
 
         for item in self.top_hints:
             modified_top_hints.append(([" "] * (max_top_hint_size - len(item))) + item)
@@ -49,39 +50,61 @@ class NonoGrid:
         for i in range(max_top_hint_size):
 
             # Space out left hints.
-            out += "  " * max_left_hint_size
+            out += (" " + " " * max_left_hint_digit) * max_left_hint_size + " "
 
             for c, col in enumerate(modified_top_hints):
 
                 # Spacing to make things nicer.
-                if c % 5 == 0 and c > 0:
-                    out += " "
-
-                out += f"{col[i]} "
+                if c != 0 and (c+1) % 5 == 0:
+                    out += ("^" * max_top_hint_digit) + f"{col[i]}" + " "
+                elif c != 0:
+                    out += ("@" * (max_top_hint_digit + 1)) + f"{col[i]}"
+                else:
+                    out += ("`" * (max_top_hint_digit - 1)) + f"{col[i]}"
 
             out += "\n"
+
+        # Hint/top row divider.
+        out += (" " + " " * max_left_hint_digit) * max_left_hint_size + "+" + "-" * \
+        (((len(self.squares) * (1 + max_top_hint_digit)) + \
+          len(self.squares) // 5) - 2) + "+\n"
 
         for r, row in enumerate(self.squares):
 
             # Don't forget to put in left hints.
             for lh in modified_left_hints[r]:
-                out += f"{lh}" + " "
+                hint_section = f"{lh}"
+                hint_section = " " * (max_left_hint_digit - len(hint_section)) + " " + hint_section
+                out += hint_section
+
+            # Divider between left hints and squares.
+            out += "|"
 
             for c, square in enumerate(row):
 
                 # Spacing to make things nicer.
-                if (c+1) % 5 == 0 and c > 0:
-                    out += f"{square}  "
-                elif c != len(row) - 1:
-                    out += f"{square} "
+                if c != 0 and (c+1) % 5 == 0:
+                    out += (" " * max_top_hint_digit) + f"{square}" + " |"
+                elif c != 0:
+                    out += (" " * max_top_hint_digit) + f"{square}"
                 else:
-                    out += f"{square}"
+                    out += (" " * (max_top_hint_digit - 1)) + f"{square}"
+                # else:
+                #     out += f"{square}"
 
             if r != len(self.squares) - 1:
                 out += "\n"
 
+            # Add divider rows between squares.
             if (r+1) % 5 == 0 and r > 0 and r < len(self.squares) - 1:
-                out += "\n"
+                out += (" " + " " * max_left_hint_digit) * max_left_hint_size + "|" + "-" * \
+                (((len(self.squares) * (1 + max_top_hint_digit)) + \
+                  len(self.squares) // 5) - 2) + "|\n"
+
+        # Bottom row divider.
+        out += "\n" + (" " + " " * max_left_hint_digit) * max_left_hint_size + "+" + "-" * \
+        (((len(self.squares) * (1 + max_top_hint_digit)) + \
+           len(self.squares) // 5) - 2) + "+"
 
         return out
 
