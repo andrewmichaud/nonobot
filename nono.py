@@ -10,8 +10,12 @@ class NonoGrid:
         self.spacer = 5
 
         # command-line output implementation details.
-        self._left_spacer = "|"
-        self._top_spacer = "-"
+        self._vert_spacer = "│"
+        self._horiz_spacer = "─"
+        self._ul_corner = "┌"
+        self._ur_corner = "┐"
+        self._ll_corner = "└"
+        self._lr_corner = "┘"
 
     def __str__(self):
         out = ""
@@ -25,7 +29,7 @@ class NonoGrid:
             for hint in item:
                 # Space out double-digit hints for legibility.
                 if len(str(hint)) > 1:
-                    new_item += f"{self._left_spacer}{hint}{self._left_spacer}"
+                    new_item += f"{self._vert_spacer}{hint}{self._vert_spacer}"
                 else:
                     new_item += f"{hint}"
 
@@ -43,7 +47,7 @@ class NonoGrid:
             for hint in item:
                 # Space out double-digit hints for legibility.
                 if len(str(hint)) > 1:
-                    new_item += f"{self._top_spacer}{hint}{self._top_spacer}"
+                    new_item += f"{self._horiz_spacer}{hint}{self._horiz_spacer}"
                 else:
                     new_item += f"{hint}"
 
@@ -78,9 +82,9 @@ class NonoGrid:
         # the end.
         # Add right corner and newline
         out += (" " * max_left_hint_size) + \
-                "+" + \
-                "-" * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
-                "+\n"
+                f"{self._ul_corner}" + \
+                self._horiz_spacer * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
+                f"{self._ur_corner}\n"
 
         for r, row in enumerate(self.squares):
 
@@ -89,13 +93,13 @@ class NonoGrid:
                 out += lh
 
             # Divider between left hints and squares.
-            out += f"{' ' * (max_left_hint_size - len(display_left_hints[r]))}|"
+            out += f"{' ' * (max_left_hint_size - len(display_left_hints[r]))}{self._vert_spacer}"
 
             for c, square in enumerate(row):
 
                 # Spacing to make things nicer.
                 if c != 0 and (c+1) % self.spacer == 0:
-                    out += f" {square} |"
+                    out += f" {square} {self._vert_spacer}"
                 else:
                     out += f" {square}"
 
@@ -105,17 +109,19 @@ class NonoGrid:
             # Add divider rows between squares.
             if (r+1) % self.spacer == 0 and r > 0 and r < len(self.squares) - 1:
                 out += (" " * max_left_hint_size) + \
-                        "|" + \
-                        "-" * (((len(self.squares)*2) + (len(self.squares)//self.spacer)*2) - 1) +\
-                        "|\n"
+                        "├" + \
+                        self._horiz_spacer * (
+                            ((len(self.squares)*2) + (len(self.squares)//self.spacer)*2) - 1
+                        ) +\
+                        f"┤\n"
 
         # Hint/top row divider.
-        # Same as top.
+        # Similar to top.
         out += "\n"
         out += (" " * max_left_hint_size) + \
-                "+" + \
-                "-" * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
-                "+\n"
+                self._ll_corner + \
+                self._horiz_spacer * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
+                f"{self._lr_corner}\n"
 
         return out
 
