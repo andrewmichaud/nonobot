@@ -3,6 +3,8 @@ from os import path
 
 from PIL import Image, ImageDraw, ImageFont
 
+HERE = path.abspath(path.dirname(__file__))
+
 
 class NonoGrid:
     def __init__(self, height, width=None):
@@ -129,7 +131,7 @@ class NonoGrid:
 
         dr = ImageDraw.Draw(im)
 
-        fnt = ImageFont.truetype("FreeMono.ttf", FONT_SIZE)
+        fnt = ImageFont.truetype(path.join(HERE, "FreeMono.ttf"), FONT_SIZE)
 
         # PIL coordinates start at the upper left corner.
 
