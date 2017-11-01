@@ -166,7 +166,7 @@ class NonoGrid:
             for c, square in enumerate(row):
                 if square.has_value:
                     fill = has_value_color
-                elif self.top_hints[c] == [0]:
+                elif self.top_hints[c] == [0] or self.left_hints[r] == [0]:
                     fill = PREBLOCKED_GREY
                 else:
                     fill = EMPTY
