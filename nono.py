@@ -1,3 +1,9 @@
+from datetime import datetime
+from os import path
+
+from PIL import Image, ImageDraw, ImageFont
+
+
 class NonoGrid:
     def __init__(self, height, width=None):
         self.height = height
@@ -13,61 +19,22 @@ class NonoGrid:
         self._vert_spacer = "│"
         self._horiz_spacer = "─"
         self._ul_corner = "┌"
-        self._ur_corner = "┐"
         self._ll_corner = "└"
+        self._ur_corner = "┐"
         self._lr_corner = "┘"
+
+        self.type = None
 
     def __str__(self):
         out = ""
 
-        # Set up left hints for display (padding!).
-        max_left_hint_size = 1
-        display_left_hints = []
-        for item in self.left_hints:
-
-            new_item = ""
-            for hint in item:
-                # Space out double-digit hints for legibility.
-                if len(str(hint)) > 1:
-                    new_item += f"{self._vert_spacer}{hint}{self._vert_spacer}"
-                else:
-                    new_item += f"{hint}"
-
-            if len(new_item) > max_left_hint_size:
-                max_left_hint_size = len(new_item)
-
-            display_left_hints.append(new_item)
-
-        # Set up top hints for display (also padding!).
-        max_top_hint_size = 1
-        display_top_hints = []
-        for item in self.top_hints:
-
-            new_item = ""
-            for hint in item:
-                # Space out double-digit hints for legibility.
-                if len(str(hint)) > 1:
-                    new_item += f"{self._horiz_spacer}{hint}{self._horiz_spacer}"
-                else:
-                    new_item += f"{hint}"
-
-            if len(new_item) > max_top_hint_size:
-                max_top_hint_size = len(new_item)
-
-            display_top_hints.append(new_item)
-
-        # Pad top hints (can't do in-line like with left hints).
-        for i, item in enumerate(display_top_hints):
-            if len(item) < max_top_hint_size:
-                display_top_hints[i] = f"{' ' * (max_top_hint_size - len(item))}{item}"
-
         # Print top hints.
-        for i in range(max_top_hint_size):
+        for i in range(self.max_top_hint_size):
 
             # Space out left hints.
-            out += f"{' ' * (max_left_hint_size + 1)}"
+            out += f"{' ' * (self.max_left_hint_size + 1)}"
 
-            for c, col in enumerate(display_top_hints):
+            for c, col in enumerate(self.display_top_hints):
                 # Space between columns for clarity.
                 out += f" {col[i]}"
 
@@ -81,7 +48,7 @@ class NonoGrid:
         # Pad out left hints, do corner, two marks per square, two marks per divider, sub one for
         # the end.
         # Add right corner and newline
-        out += (" " * max_left_hint_size) + \
+        out += (" " * self.max_left_hint_size) + \
                 f"{self._ul_corner}" + \
                 self._horiz_spacer * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
                 f"{self._ur_corner}\n"
@@ -89,11 +56,11 @@ class NonoGrid:
         for r, row in enumerate(self.squares):
 
             # Don't forget to put in left hints.
-            for lh in display_left_hints[r]:
+            for lh in self.display_left_hints[r]:
                 out += lh
 
             # Divider between left hints and squares.
-            out += f"{' ' * (max_left_hint_size - len(display_left_hints[r]))}{self._vert_spacer}"
+            out += f"{' ' * (self.max_left_hint_size - len(self.display_left_hints[r]))}{self._vert_spacer}"
 
             for c, square in enumerate(row):
 
@@ -108,7 +75,7 @@ class NonoGrid:
 
             # Add divider rows between squares.
             if (r+1) % self.spacer == 0 and r > 0 and r < len(self.squares) - 1:
-                out += (" " * max_left_hint_size) + \
+                out += (" " * self.max_left_hint_size) + \
                         "├" + \
                         self._horiz_spacer * (
                             ((len(self.squares)*2) + (len(self.squares)//self.spacer)*2) - 1
@@ -118,18 +85,160 @@ class NonoGrid:
         # Hint/top row divider.
         # Similar to top.
         out += "\n"
-        out += (" " * max_left_hint_size) + \
+        out += (" " * self.max_left_hint_size) + \
                 self._ll_corner + \
                 self._horiz_spacer * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
                 f"{self._lr_corner}\n"
 
         return out
 
+    def to_picture(self, filename=None, has_value_color="white"):
+        """Print grid to picture."""
+
+        SQUARE_SIZE = 50
+        HINT_SPACE_SIZE = 30
+        SQUARE_DIVIDER_SIZE = 5
+        SPACER_SIZE = 10
+        FONT_SIZE = 45
+
+        EMPTY = (255, 255, 255)
+        BG_GREY = (0, 0, 0)
+        DIVIDER = BG_GREY
+        PREBLOCKED_GREY = (200, 209, 211)
+
+        if filename is None:
+            filename = path.join(path.abspath(path.dirname(__file__)), "nonogrid.jpg")
+
+        rows = len(self.squares)
+        columns = len(self.squares[0])
+
+        left_hint_width = SQUARE_SIZE * (len(self.display_left_hints[0]))
+        top_hint_height = SQUARE_SIZE * (len(self.display_top_hints[0]))
+
+        width = left_hint_width +\
+                (columns * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
+                ((columns // 5) * SPACER_SIZE)
+
+        height = top_hint_height +\
+                (rows * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
+                ((rows // 5) * SPACER_SIZE)
+
+        im = Image.new("RGB",
+                       (width, height),
+                       BG_GREY)
+
+        dr = ImageDraw.Draw(im)
+
+        fnt = ImageFont.truetype("FreeMono.ttf", FONT_SIZE)
+
+        # PIL coordinates start at the upper left corner.
+
+        y0 = SQUARE_DIVIDER_SIZE
+
+        # Print top hints.
+        for i in range(len(self.display_top_hints[0])):
+
+            # Space out left hints.
+            x0 = (self.max_left_hint_size * HINT_SPACE_SIZE) + SQUARE_DIVIDER_SIZE + (SQUARE_SIZE * 0.5)
+
+            for hi, item in enumerate(list(map(lambda x: x[i], self.display_top_hints))):
+                dr.text((x0, y0), item, font=fnt, fill=(255,255,255,255))
+                x0 += SQUARE_SIZE + SQUARE_DIVIDER_SIZE
+
+                if (hi+1) % 5 == 0:
+                    x0 += SPACER_SIZE
+
+            y0 += HINT_SPACE_SIZE * 1.5
+
+        # Handle squares (and left hints).
+        for r, row in enumerate(self.squares):
+
+            x0 = SQUARE_DIVIDER_SIZE
+            for lh, hint in enumerate(self.display_left_hints[r]):
+                dr.text((x0, y0), hint, font=fnt, fill=(255,255,255,255))
+                x0 += HINT_SPACE_SIZE
+
+            # Space hints from squares.
+            x0 += SPACER_SIZE
+
+            for c, square in enumerate(row):
+                if square.has_value:
+                    fill = has_value_color
+                elif self.top_hints[c] == [0]:
+                    fill = PREBLOCKED_GREY
+                else:
+                    fill = EMPTY
+
+                dr.rectangle(xy=[(x0, y0), (x0+SQUARE_SIZE, y0+SQUARE_SIZE)],
+                                              fill=fill)
+
+                x0 += SQUARE_SIZE + SQUARE_DIVIDER_SIZE
+
+                # Divide into sets of five.
+                if (c+1) % 5 == 0:
+                    x0 += SPACER_SIZE
+
+            y0 += SQUARE_SIZE + SQUARE_DIVIDER_SIZE
+
+            # Divide into sets of five.
+            if (r+1) % 5 == 0:
+                y0 += SPACER_SIZE
+
+        im.save(filename)
+
     def clear(self):
         """Clear grid."""
         for row in self.squares:
             for square in row:
                 square.clear()
+
+    def set_hints_for_display(self):
+        """Put padding in hints so they can be printed."""
+        # Set up left hints for display (padding!).
+        self.max_left_hint_size = 1
+        self.display_left_hints = []
+        for item in self.left_hints:
+
+            new_item = ""
+            for hint in item:
+                # Space out double-digit hints for legibility.
+                if len(str(hint)) > 1:
+                    new_item += f"{self._vert_spacer}{hint}{self._vert_spacer}"
+                else:
+                    new_item += f"{hint}"
+
+            if len(new_item) > self.max_left_hint_size:
+                self.max_left_hint_size = len(new_item)
+
+            self.display_left_hints.append(new_item)
+
+        # Set up top hints for display (also padding!).
+        self.max_top_hint_size = 1
+        self.display_top_hints = []
+        for item in self.top_hints:
+
+            new_item = ""
+            for hint in item:
+                # Space out double-digit hints for legibility.
+                if len(str(hint)) > 1:
+                    new_item += f"{self._horiz_spacer}{hint}{self._horiz_spacer}"
+                else:
+                    new_item += f"{hint}"
+
+            if len(new_item) > self.max_top_hint_size:
+                self.max_top_hint_size = len(new_item)
+
+            self.display_top_hints.append(new_item)
+
+        # Pad left hints.
+        for i, item in enumerate(self.display_left_hints):
+            if len(item) < self.max_left_hint_size:
+                self.display_left_hints[i] = f"{' ' * (self.max_left_hint_size - len(item))}{item}"
+
+        # Pad top hints.
+        for i, item in enumerate(self.display_top_hints):
+            if len(item) < self.max_top_hint_size:
+                self.display_top_hints[i] = f"{' ' * (self.max_top_hint_size - len(item))}{item}"
 
     def gen_hints(self):
         """Generate nonogram hints."""
@@ -179,6 +288,9 @@ class NonoGrid:
             for c, square in enumerate(self.squares[r]):
                 if 0 in self.left_hints[r] or 0 in self.top_hints[c]:
                     square.denied = True
+
+
+        self.set_hints_for_display()
 
     class Square:
         def __init__(self):
