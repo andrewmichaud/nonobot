@@ -1,3 +1,5 @@
+import base64
+import zlib
 from datetime import datetime
 from os import path
 
@@ -294,6 +296,23 @@ class NonoGrid:
 
         self.set_hints_for_display()
 
+    def encode(self):
+        """Encode bot squares to a condensed form for easy tweeting/sharing."""
+        height = len(self.squares)
+        width = len(self.squares[0])
+
+        binary_squares = []
+        for row in self.squares:
+            for square in row:
+                binary_squares.append("1" if square.has_value else "0")
+
+        squares_binary = "".join(binary_squares)
+        squares_hex = "{:0x}".format(int(squares_binary, 2))
+        squares_hex_compressed = zlib.compress(str.encode(squares_hex))
+        squares_hex_compressed_encoded = base64.urlsafe_b64encode(squares_hex_compressed).decode()
+
+        return f"{height} {width} {squares_hex_compressed_encoded}"
+
     class Square:
         def __init__(self):
             # User indicators.
@@ -319,3 +338,40 @@ class NonoGrid:
             self.marked = False
             self.denied = False
             self.has_value = False
+
+
+def decode(nonostring):
+    """Restore NonoGrid from condensed form."""
+
+    items = nonostring.split()
+    height = int(items[0])
+    width = int(items[1])
+
+    grid = NonoGrid(height, width)
+
+    size = height * width
+
+    decoded = base64.urlsafe_b64decode(items[2])
+    uncompressed = zlib.decompress(decoded)
+    unpadded_binary = str(bin(int(uncompressed, 16))[2:])
+    padded_binary = unpadded_binary.zfill(size)
+
+    squares = []
+    row = []
+    for c, char in enumerate(padded_binary):
+
+        if c % width == 0 and c != 0:
+            squares.append(row)
+            row = []
+
+        square = NonoGrid.Square()
+        if char == '1':
+            square.has_value = True
+
+        row.append(square)
+
+    squares.append(row)
+
+    grid.squares = squares
+
+    return grid
