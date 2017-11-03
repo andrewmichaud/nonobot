@@ -1,4 +1,6 @@
 import base64
+import json
+import string
 import zlib
 from datetime import datetime
 from os import path
@@ -308,10 +310,12 @@ class NonoGrid:
 
         squares_binary = "".join(binary_squares)
         squares_hex = "{:0x}".format(int(squares_binary, 2))
-        squares_hex_compressed = zlib.compress(str.encode(squares_hex))
-        squares_hex_compressed_encoded = base64.urlsafe_b64encode(squares_hex_compressed).decode()
 
-        return f"{height} {width} {squares_hex_compressed_encoded}"
+        data = {"height": height, "width": width, "squares": squares_hex}
+        data_compressed = zlib.compress(str(data).encode())
+        data_encoded = base64.urlsafe_b64encode(data_compressed).decode()
+
+        return f"{data_encoded}"
 
     class Square:
         def __init__(self):
@@ -343,17 +347,18 @@ class NonoGrid:
 def decode(nonostring):
     """Restore NonoGrid from condensed form."""
 
-    items = nonostring.split()
-    height = int(items[0])
-    width = int(items[1])
+    decoded = base64.urlsafe_b64decode(nonostring)
+    uncompressed = zlib.decompress(decoded).decode().replace("'", '"')
+    redict = json.loads(uncompressed)
+    height = redict["height"]
+    width = redict["width"]
+    unpadded_binary = redict["squares"]
 
     grid = NonoGrid(height, width)
 
     size = height * width
 
-    decoded = base64.urlsafe_b64decode(items[2])
-    uncompressed = zlib.decompress(decoded)
-    unpadded_binary = str(bin(int(uncompressed, 16))[2:])
+    unpadded_binary = str(bin(int(unpadded_binary, 16))[2:])
     padded_binary = unpadded_binary.zfill(size)
 
     squares = []
