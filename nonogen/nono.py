@@ -54,7 +54,7 @@ class NonoGrid:
         # the end.
         # Add right corner and newline
         out += (" " * self.max_left_hint_size) + \
-                f"{self._ul_corner}" + self._horiz_spacer * self.spacer_width() + f"{self._ur_corner}\n"
+                f"{self._ul_corner}" + self._horiz_spacer * (self.grid_size()-2)+ f"{self._ur_corner}\n"
 
         for r, row in enumerate(self.squares):
 
@@ -79,22 +79,25 @@ class NonoGrid:
             # Add divider rows between squares.
             if (r+1) % self.spacer == 0 and r > 0 and r < self.height - 1:
                 out += " " * self.max_left_hint_size +\
-                        "├" + self._horiz_spacer * self.spacer_width() + "┤\n"
+                        "├" + self._horiz_spacer * (self.grid_size()-2) + "┤\n"
 
         # Hint/top row divider.
         # Similar to top.
         out += "\n"
         out += (" " * self.max_left_hint_size) + \
-                self._ll_corner + self._horiz_spacer * self.spacer_width() + f"{self._lr_corner}\n"
+                self._ll_corner + self._horiz_spacer * (self.grid_size()-2) + f"{self._lr_corner}\n"
 
         return out
 
-    # TODO see if this can do double duty for image gen somehow.
-    def spacer_width(self):
-        """Do the obnoxious calculation to get the correct width for dividers in text."""
-        return (self.width * 2) +\
-                (((self.width//self.spacer) * 2) - 1) +\
-                (0 if self.width % self.spacer == 0 else 2)
+    def grid_size(self, dim=None, square_size=1, spacer_size=1, meta_spacer_size=2):
+        """Do the obnoxious calculation to get the correct width or height for grid."""
+        if dim is None:
+            dim = self.width
+
+        return (dim * square_size) +\
+                ((dim-1) * spacer_size) +\
+                (((dim//self.spacer) + 1) * meta_spacer_size) +\
+                (0 if dim % self.spacer == 0 else 1 * meta_spacer_size)
 
 
     def to_picture(self, filename=None, has_value_color="white"):
@@ -117,17 +120,15 @@ class NonoGrid:
         left_hint_width = SQUARE_SIZE * (len(self.display_left_hints[0]))
         top_hint_height = SQUARE_SIZE * (len(self.display_top_hints[0]))
 
-        width = left_hint_width +\
-                (self.width * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
-                ((self.width // 5) * SPACER_SIZE)
+        width = left_hint_width + self.grid_size(dim=self.width, square_size=SQUARE_SIZE,
+                                                 spacer_size=SPACER_SIZE,
+                                                 meta_spacer_size=SQUARE_DIVIDER_SIZE)
 
-        height = top_hint_height +\
-                (self.height * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
-                ((self.height // 5) * SPACER_SIZE)
+        height = top_hint_height + self.grid_size(dim=self.height, square_size=SQUARE_SIZE,
+                                                  spacer_size=SPACER_SIZE,
+                                                  meta_spacer_size=SQUARE_DIVIDER_SIZE)
 
-        im = Image.new("RGB",
-                       (width, height),
-                       BG_GREY)
+        im = Image.new("RGB", (width, height), BG_GREY)
 
         dr = ImageDraw.Draw(im)
 
