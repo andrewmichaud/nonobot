@@ -1,6 +1,5 @@
 import base64
 import json
-import string
 import zlib
 from datetime import datetime
 from os import path
@@ -55,9 +54,7 @@ class NonoGrid:
         # the end.
         # Add right corner and newline
         out += (" " * self.max_left_hint_size) + \
-                f"{self._ul_corner}" + \
-                self._horiz_spacer * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
-                f"{self._ur_corner}\n"
+                f"{self._ul_corner}" + self._horiz_spacer * self.spacer_width() + f"{self._ur_corner}\n"
 
         for r, row in enumerate(self.squares):
 
@@ -71,32 +68,34 @@ class NonoGrid:
             for c, square in enumerate(row):
 
                 # Spacing to make things nicer.
-                if c != 0 and (c+1) % self.spacer == 0:
+                if c == len(row)-1 or (c != 0 and (c+1) % self.spacer == 0):
                     out += f" {square} {self._vert_spacer}"
                 else:
                     out += f" {square}"
 
-            if r != len(self.squares) - 1:
+            if r != self.height - 1:
                 out += "\n"
 
             # Add divider rows between squares.
-            if (r+1) % self.spacer == 0 and r > 0 and r < len(self.squares) - 1:
-                out += (" " * self.max_left_hint_size) + \
-                        "├" + \
-                        self._horiz_spacer * (
-                            ((len(self.squares)*2) + (len(self.squares)//self.spacer)*2) - 1
-                        ) +\
-                        f"┤\n"
+            if (r+1) % self.spacer == 0 and r > 0 and r < self.height - 1:
+                out += " " * self.max_left_hint_size +\
+                        "├" + self._horiz_spacer * self.spacer_width() + "┤\n"
 
         # Hint/top row divider.
         # Similar to top.
         out += "\n"
         out += (" " * self.max_left_hint_size) + \
-                self._ll_corner + \
-                self._horiz_spacer * (((len(self.squares) * 2) + (len(self.squares) // self.spacer) * 2) - 1) +\
-                f"{self._lr_corner}\n"
+                self._ll_corner + self._horiz_spacer * self.spacer_width() + f"{self._lr_corner}\n"
 
         return out
+
+    # TODO see if this can do double duty for image gen somehow.
+    def spacer_width(self):
+        """Do the obnoxious calculation to get the correct width for dividers in text."""
+        return (self.width * 2) +\
+                (((self.width//self.spacer) * 2) - 1) +\
+                (0 if self.width % self.spacer == 0 else 2)
+
 
     def to_picture(self, filename=None, has_value_color="white"):
         """Print grid to picture."""
@@ -115,19 +114,16 @@ class NonoGrid:
         if filename is None:
             filename = path.join(path.abspath(path.dirname(__file__)), "nonogrid.jpg")
 
-        rows = len(self.squares)
-        columns = len(self.squares[0])
-
         left_hint_width = SQUARE_SIZE * (len(self.display_left_hints[0]))
         top_hint_height = SQUARE_SIZE * (len(self.display_top_hints[0]))
 
         width = left_hint_width +\
-                (columns * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
-                ((columns // 5) * SPACER_SIZE)
+                (self.width * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
+                ((self.width // 5) * SPACER_SIZE)
 
         height = top_hint_height +\
-                (rows * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
-                ((rows // 5) * SPACER_SIZE)
+                (self.height * (SQUARE_SIZE + SQUARE_DIVIDER_SIZE)) +\
+                ((self.height // 5) * SPACER_SIZE)
 
         im = Image.new("RGB",
                        (width, height),
@@ -248,11 +244,11 @@ class NonoGrid:
 
     def gen_hints(self):
         """Generate nonogram hints."""
-        self.left_hints = [[] for r in range(len(self.squares))]
-        self.top_hints = [[] for c in range(len(self.squares[0]))]
+        self.left_hints = [[] for r in range(self.height)]
+        self.top_hints = [[] for c in range(self.width)]
 
         # Generate hints from squares.
-        col_counts = [0] * len(self.squares[0])
+        col_counts = [0] * self.width
         for r, row in enumerate(self.squares):
             row_count = 0
             for c, square in enumerate(row):
@@ -281,7 +277,7 @@ class NonoGrid:
                 self.left_hints[r] = [0]
 
         # Handle last column.
-        for c in range(len(self.squares[0])):
+        for c in range(self.width):
             if col_counts[c] > 0:
                 self.top_hints[c].append(col_counts[c])
 
@@ -300,9 +296,6 @@ class NonoGrid:
 
     def encode(self):
         """Encode bot squares to a condensed form for easy tweeting/sharing."""
-        height = len(self.squares)
-        width = len(self.squares[0])
-
         binary_squares = []
         for row in self.squares:
             for square in row:
@@ -311,7 +304,7 @@ class NonoGrid:
         squares_binary = "".join(binary_squares)
         squares_hex = "{:0x}".format(int(squares_binary, 2))
 
-        data = {"height": height, "width": width, "squares": squares_hex}
+        data = {"height": self.height, "width": self.width, "squares": squares_hex}
         data_compressed = zlib.compress(str(data).encode())
         data_encoded = base64.urlsafe_b64encode(data_compressed).decode()
 
@@ -352,11 +345,10 @@ def decode(nonostring):
     redict = json.loads(uncompressed)
     height = redict["height"]
     width = redict["width"]
+    size = height * width
     unpadded_binary = redict["squares"]
 
     grid = NonoGrid(height, width)
-
-    size = height * width
 
     unpadded_binary = str(bin(int(unpadded_binary, 16))[2:])
     padded_binary = unpadded_binary.zfill(size)
