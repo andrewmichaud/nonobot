@@ -235,13 +235,11 @@ class NonoGrid:
 
         # Pad left hints.
         for i, item in enumerate(self.display_left_hints):
-            if len(item) < self.max_left_hint_size:
-                self.display_left_hints[i] = f"{' ' * (self.max_left_hint_size - len(item))}{item}"
+            self.display_left_hints[i] = f"{' ' * (self.max_left_hint_size - len(item))}{item}"
 
         # Pad top hints.
         for i, item in enumerate(self.display_top_hints):
-            if len(item) < self.max_top_hint_size:
-                self.display_top_hints[i] = f"{' ' * (self.max_top_hint_size - len(item))}{item}"
+            self.display_top_hints[i] = f"{' ' * (self.max_top_hint_size - len(item))}{item}"
 
     def gen_hints(self):
         """Generate nonogram hints."""
