@@ -1,6 +1,6 @@
 import random
 
-from nonogen.perlin import PerlinNoiseFactory
+from perlin import PerlinNoiseFactory
 
 def gen_random(nonogrid):
     """Generate nonogrid completely at random."""
