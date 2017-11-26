@@ -6,4 +6,6 @@ import nonogen
 import outline
 
 if __name__ == "__main__":
-    outline.outline()
+    outline_data = outline.OutlineData()
+    outline_data.outline()
+    outline_data.save()
