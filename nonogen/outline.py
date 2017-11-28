@@ -1,5 +1,6 @@
 import itertools
 import sys
+from copy import deepcopy
 from os import path
 
 from PIL import Image
@@ -23,6 +24,10 @@ class SeamCarveData:
         self.parent = None
         self.pixel = None
         self.marked = False
+
+
+    def __str__(self):
+        return str(self.__dict__)
 
 class OutlineData:
     """Data for outlining."""
@@ -54,18 +59,11 @@ class OutlineData:
         """Save out image."""
         self.out_image.save(self.out_name)
         pixels = self.final.load()
-        print(f"final {self.final.height} {self.final.width}")
-        print(f"self {self.height} {self.width}")
         for y in range(0, self.height-self.shrink_factor, self.shrink_factor):
             for x in range(0, self.width-self.shrink_factor, self.shrink_factor):
                 pixels[(x//self.shrink_factor, y//self.shrink_factor)] = self.out_pixels[(x,y)]
 
         self.final.save("out_final.png")
-
-    def get_energies(self):
-        energies = [[0] * im.width] * im.height
-        print(energies)
-
 
 def should_outline(to_check):
     """Check if pixel should be outlined based on its neighbors."""
@@ -92,21 +90,27 @@ def get_neighbors(pixels, x, y, height, width):
     # Diagonals?
     return neighbors
 
-def horiz_seamcarve(in_name=IN_NAME, count=10, show=True):
+def horiz_seamcarve(in_name=IN_NAME, count=100, show=True):
     """Seamcarve image N times."""
     im = Image.open(in_name)
     im_pixels = im.load()
 
-    energies = get_energies(im_pixels, im.height, im.width)
-
     # Create copy of out pixels we can manipulate and then save.
-    out_pixels = [[0] * im.width] * im.height
+    out_pixels = []
     for y in range(im.height):
+        row = []
         for x in range(im.width):
-            out_pixels[y][x] = im_pixels[(x, y)]
+            row.append(im_pixels[(x, y)])
+
+        out_pixels.append(row)
 
     # Carve!
     for i in range(count):
+        if i == 0:
+            base_energies = create_base_energy(im_pixels, im.height, im.width)
+            energies = calculate_energies(im_pixels, base_energies, im.height, im.width)
+        else:
+            energies = calculate_energies(im_pixels, energies, im.height, im.width)
 
         # Find start point.
         y = im.height-1
@@ -120,50 +124,48 @@ def horiz_seamcarve(in_name=IN_NAME, count=10, show=True):
             # Mark if show is set to true, otherwise delete.
             if show:
                 out_pixels[sc_data.y][sc_data.x] = (255, 0, 0, 254)
+            else:
+                out_pixels[sc_data.y].pop(sc_data.x-i)
+
+            sc_data.marked = True
 
             sc_data = sc_data.parent
 
     return out_pixels
 
-def get_energies(im_pixels, height, width):
-    """Get grid of energies for image."""
-
-    energies = [[0] * width] * height
-
-    # Do first row.
-    for x in range(width):
-        sc_data = SeamCarveData()
-        sc_data.x = x
-        sc_data.y = 0
-        sc_data.pixel = im_pixels[(x, 0)]
-        sc_data.energy = get_energy(im_pixels[(x, 0)])
-
-        energies[0][x] = sc_data
+def calculate_energies(im_pixels, energies, height, width):
+    """(Re)calculate grid of energies for image."""
 
     # Do the rest.
     for y in range(1, height):
         for x in range(width):
-            sc_data = SeamCarveData()
+            sc_data = energies[y][x]
             sc_data.x = x
             sc_data.y = y
             sc_data.pixel = im_pixels[(x, y)]
 
             here_energy = get_energy(im_pixels[(x, y)])
 
-            if x > 0:
+            if x > 0 and not energies[y-1][x-1].marked:
                 ul_between = get_energy_between(sc_data, energies[y-1][x-1])
             else:
                 ul_between = sys.maxsize
 
-            up_between = get_energy_between(sc_data, energies[y-1][x])
+            if energies[y-1][x].marked:
+                up_between = sys.maxsize
+            else:
+                up_between = get_energy_between(sc_data, energies[y-1][x])
 
-            if x < width - 1:
+            if x < width - 1 and not energies[y-1][x+1].marked:
                 ur_between = get_energy_between(sc_data, energies[y-1][x+1])
             else:
                 ur_between = sys.maxsize
 
             min_of = min(ul_between, up_between, ur_between)
-            sc_data.energy = here_energy + min_of
+            if min_of == sys.maxsize:
+                sc_data.energy = min_of
+            else:
+                sc_data.energy = here_energy + min_of
 
             if ul_between == min_of:
                 sc_data.parent = energies[y-1][x-1]
@@ -178,6 +180,21 @@ def get_energies(im_pixels, height, width):
 
     return energies
 
+def create_base_energy(im_pixels, height, width):
+    """Create base energies array."""
+    energies = [[SeamCarveData() for i in range(width)] for r in range(height)]
+
+    # Do first row.
+    for x in range(width):
+        sc_data = energies[0][x]
+        sc_data.x = x
+        sc_data.y = 0
+        sc_data.pixel = im_pixels[(x, 0)]
+        sc_data.energy = get_energy(im_pixels[(x, 0)])
+        energies[0][x] = sc_data
+
+    return energies
+
 def save_pixels(pixels):
     """Save array of pixels to an RGBA image."""
     height = len(pixels)
@@ -188,9 +205,9 @@ def save_pixels(pixels):
     out_pixels = out_image.load()
 
     for y in range(height):
+        # print(pixels[y][0])
         for x in range(width):
             out_pixels[(x, y)] = pixels[y][x]
-            print(pixels[y][x])
 
     out_image.save("seamcarved_image.png")
 
