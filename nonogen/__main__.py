@@ -6,6 +6,5 @@ import nonogen
 import outline
 
 if __name__ == "__main__":
-    outline_data = outline.OutlineData()
-    outline_data.outline()
-    outline_data.save()
+    out_pixels = outline.horiz_seamcarve()
+    outline.save_pixels(out_pixels)
