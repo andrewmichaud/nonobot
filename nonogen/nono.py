@@ -100,7 +100,7 @@ class NonoGrid:
                 (0 if dim % self.spacer == 0 else 1 * meta_spacer_size)
 
 
-    def to_picture(self, filename=None, has_value_color="white"):
+    def to_picture(self, filename=None, has_value_color="white", font_name=None):
         """Print grid to picture."""
 
         SQUARE_SIZE = 50
@@ -132,7 +132,10 @@ class NonoGrid:
 
         dr = ImageDraw.Draw(im)
 
-        fnt = ImageFont.truetype(path.join(HERE, "FreeMono.ttf"), FONT_SIZE)
+        if font_name is not None:
+            fnt = ImageFont.truetype(font_name, FONT_SIZE)
+        else:
+            fnt = ImageFont.load_default()
 
         # PIL coordinates start at the upper left corner.
 
