@@ -33,6 +33,6 @@ setup(author="Andrew Michaud",
 
       python_requires=">=3.6",
 
-      url="https://github.com/andrewmichaud/nonogen",
+      url="https://github.com/alixnovosi/nonogen",
 
       version=VERSION)
